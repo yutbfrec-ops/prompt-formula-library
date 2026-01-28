@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>提示詞公式庫（v0.1 Pack A）</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#111824; --muted:#7f8ea3; --text:#e8eef7;
+      --brand:#7dd3fc; --line:#1f2a3a; --chip:#172133; --ok:#34d399;
+      --warn:#fbbf24; --bad:#fb7185;
+      --radius:16px;
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:var(--sans);background:radial-gradient(1200px 800px at 10% 0%, rgba(125,211,252,.12), transparent 55%), var(--bg);color:var(--text)}
+    a{color:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px}
+    .top{
+      display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;
+      padding:18px;border:1px solid var(--line);background:rgba(17,24,36,.82);backdrop-filter: blur(10px);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .brand{display:flex;flex-direction:column;gap:6px}
+    .brand h1{margin:0;font-size:20px;letter-spacing:.2px}
+    .brand .sub{color:var(--muted);font-size:13px;line-height:1.3}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .btn{
+      border:1px solid var(--line);background:linear-gradient(180deg, rgba(23,33,51,.9), rgba(17,24,36,.9));
+      color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;
+      font-size:13px;display:inline-flex;gap:8px;align-items:center;
+    }
+    .btn:hover{border-color:#2b3a52}
+    .btn.primary{border-color:rgba(125,211,252,.55);box-shadow:0 0 0 1px rgba(125,211,252,.15) inset}
+    .btn .dot{width:8px;height:8px;border-radius:99px;background:var(--brand);display:inline-block}
+    .row{display:flex;gap:14px;margin-top:16px;align-items:stretch;flex-wrap:wrap}
+    .panel{
+      border:1px solid var(--line);background:rgba(17,24,36,.72);border-radius:var(--radius);
+      box-shadow: var(--shadow);overflow:hidden;
+    }
+    .left{flex:1 1 320px;min-width:300px}
+    .right{flex:2 1 520px;min-width:320px}
+    .toolbar{padding:14px;border-bottom:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .search{
+      flex:1 1 260px;min-width:240px;display:flex;align-items:center;gap:8px;
+      border:1px solid var(--line);background:rgba(11,15,20,.55);
+      padding:10px 12px;border-radius:12px;
+    }
+    .search input{
+      width:100%;border:none;outline:none;background:transparent;color:var(--text);font-size:14px;
+    }
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{
+      padding:8px 10px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(11,15,20,.45);color:var(--muted);font-size:12px;cursor:pointer;
+    }
+    .tab.active{color:var(--text);border-color:rgba(125,211,252,.55);background:rgba(125,211,252,.10)}
+    .list{max-height:62vh;overflow:auto}
+    .card{
+      padding:14px;border-bottom:1px solid var(--line);cursor:pointer;
+    }
+    .card:hover{background:rgba(125,211,252,.05)}
+    .card.active{background:rgba(125,211,252,.08)}
+    .card h3{margin:0 0 6px 0;font-size:14px}
+    .card .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .chip{background:var(--chip);border:1px solid rgba(255,255,255,.05);color:var(--muted);font-size:11px;padding:4px 8px;border-radius:999px}
+    .chip.pack{color:#c7d2fe;border-color:rgba(199,210,254,.18)}
+    .chip.tag{color:#a7f3d0;border-color:rgba(167,243,208,.15)}
+    /* 新手模式：隱藏技術標籤，避免資訊噪音 */
+    .wrap[data-mode="basic"] .chip{display:none}
+    .content{padding:16px}
+    .title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .title h2{margin:0;font-size:18px}
+    .title p{margin:6px 0 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+    .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+    .field{border:1px solid var(--line);background:rgba(11,15,20,.45);border-radius:14px;padding:12px}
+    .field label{display:block;color:var(--muted);font-size:12px;margin-bottom:8px}
+    .field input,.field textarea{
+      width:100%;border:none;outline:none;background:transparent;color:var(--text);font-size:13px;line-height:1.35;
+      font-family:var(--sans);
+    }
+    .field textarea{min-height:82px;resize:vertical}
+    .outwrap{margin-top:12px}
+    .outhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .outhead .hint{color:var(--muted);font-size:12px}
+    pre{
+      margin:10px 0 0 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(11,15,20,.55);
+      overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:12.5px;line-height:1.45;
+    }
+    .toast{
+      position:fixed;right:16px;bottom:16px;max-width:420px;
+      padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(17,24,36,.92);
+      box-shadow: var(--shadow);color:var(--text);display:none;
+    }
+    .toast.show{display:block}
+
+    /* 低相容性複製備援：彈窗讓使用者長按複製 */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:120}
+    .modal.show{display:flex}
+    .modal .box{width:min(760px,92vw);max-height:80vh;overflow:auto;border:1px solid var(--line);background:rgba(17,24,36,.96);border-radius:16px;box-shadow:var(--shadow);padding:14px}
+    .modal .box h3{margin:0 0 8px 0;font-size:14px}
+    .modal .box textarea{width:100%;min-height:240px;border:1px solid var(--line);border-radius:12px;background:rgba(11,15,20,.55);color:var(--text);padding:12px;font-family:var(--mono);font-size:12.5px;line-height:1.45}
+    .modal .box .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
+    .small{font-size:12px;color:var(--muted)}
+    .divider{height:1px;background:var(--line);margin:14px 0}
+    .footer{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.4}
+    .kbd{font-family:var(--mono);font-size:11px;color:#cbd5e1;background:rgba(11,15,20,.6);border:1px solid rgba(255,255,255,.06);padding:2px 6px;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app" data-mode="basic">
+    <div class="top">
+      <div class="brand">
+        <h1>提示詞公式庫</h1>
+        <div class="sub">填 2–3 格 → 複製 → 貼到 ChatGPT / Gemini / 任何 AI 工具</div>
+        <div class="small" id="metaLine"></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnMode">新手模式：開</button>
+        <details class="btn" style="padding:0">
+          <summary class="btn" style="list-style:none;user-select:none">資料</summary>
+          <div style="position:absolute;right:0;margin-top:8px;min-width:220px;z-index:50">
+            <div class="panel" style="padding:10px">
+              <div class="small" style="margin-bottom:10px">匯入/匯出你的自訂 prompts.json</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn" id="btnExport"><span class="dot"></span>匯出</button>
+                <button class="btn" id="btnImport">匯入</button>
+                <button class="btn" id="btnReset">重置本地</button>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="panel left">
+        <div class="toolbar">
+          <div class="search">
+            <span class="small">🔎</span>
+            <input id="q" placeholder="搜尋：GAF / TL;DR / 表格 / 限制 / 審稿…" />
+          </div>
+          <div class="tabs" id="tabs"></div>
+        </div>
+        <div class="list" id="list"></div>
+      </div>
+
+      <div class="panel right">
+        <div class="content">
+          <div class="title">
+            <div>
+              <h2 id="pTitle">載入中…</h2>
+              <p id="pTeaser"></p>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn primary" id="btnCopy">一鍵 Copy</button>
+              <button class="btn" id="btnCopyRaw">複製模板（不替換）</button>
+            </div>
+          </div>
+
+          <div class="grid" id="vars"></div>
+
+          <div class="outwrap">
+            <div class="outhead">
+              <div class="hint">輸出預覽（會用你填的變數替換 <span class="kbd">{{variable}}</span>）</div>
+              <div class="small">小技巧：先用 <span class="kbd">Q3</span>（先問問題）或 <span class="kbd">限制包</span>，可控度會大幅上升</div>
+            </div>
+            <pre id="out"></pre>
+          </div>
+
+          <div class="divider"></div>
+          <div class="footer">
+            <div>部署到 GitHub Pages：把 <span class="kbd">index.html</span> + <span class="kbd">prompts.json</span> 放到 repo 根目錄 → Settings → Pages → Deploy。</div>
+            <div>本頁會優先讀取本地 localStorage 的資料；若無，才讀取 prompts.json。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="copyModal" aria-hidden="true">
+      <div class="box">
+        <h3>你的瀏覽器不允許自動複製</h3>
+        <div class="small">做法：長按下方文字 → 全選 → 複製（或按「全選」再複製）</div>
+        <textarea id="fallbackCopyArea" readonly></textarea>
+        <div class="row">
+          <button class="btn" id="btnSelectAll">全選</button>
+          <button class="btn primary" id="btnCloseModal">關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <input type="file" id="fileInput" accept="application/json" style="display:none" />
+  </div>
+
+<script>
+(() => {
+  const LS_KEY = "pfl_prompts_json_v1";
+
+  const el = (id) => document.getElementById(id);
+  const toast = (msg) => {
+    const t = el("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 1800);
+  };
+
+  const state = {
+    data: null,
+    activePack: "ALL",
+    activeId: null,
+    query: "",
+    values: {},
+    uiMode: (localStorage.getItem("pfl_ui_mode") || "basic"),
+  };
+
+  const normalize = (s) => (s || "").toString().toLowerCase();
+
+  function compileTemplate(tpl, values) {
+    return (tpl || "").replace(/\{\{(\w+)\}\}/g, (_, k) => (values[k] ?? ""));
+  }
+
+  function packsFromData(data) {
+    const set = new Set((data?.prompts || []).map(p => p.pack).filter(Boolean));
+    const packs = Array.from(set).sort();
+    return ["ALL", ...packs];
+  }
+
+  function renderTabs() {
+    const tabs = el("tabs");
+    tabs.innerHTML = "";
+    for (const p of packsFromData(state.data)) {
+      const b = document.createElement("button");
+      b.className = "tab" + (state.activePack === p ? " active" : "");
+      b.textContent = p === "ALL" ? "全部" : ("Pack " + p);
+      b.onclick = () => { state.activePack = p; renderList(); };
+      tabs.appendChild(b);
+    }
+  }
+
+  function promptMatches(p) {
+    const q = normalize(state.query);
+    if (!q) return true;
+    const hay = [
+      p.id, p.title, p.teaser,
+      ...(p.tags || []),
+      ...(p.variables || []).map(v => v.key),
+      ...(p.variables || []).map(v => v.label),
+    ].map(normalize).join(" ");
+    return hay.includes(q);
+  }
+
+  function renderList() {
+    const list = el("list");
+    list.innerHTML = "";
+
+    const items = (state.data?.prompts || [])
+      .filter(p => state.activePack === "ALL" ? true : p.pack === state.activePack)
+      .filter(promptMatches);
+
+    if (!items.length) {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `<div class="small">找不到符合的模板。換個關鍵字試試。</div>`;
+      list.appendChild(div);
+      return;
+    }
+
+    for (const p of items) {
+      const div = document.createElement("div");
+      div.className = "card" + (state.activeId === p.id ? " active" : "");
+      div.onclick = () => setActive(p.id);
+      div.innerHTML = `
+        <h3>${escapeHtml(p.title)}</h3>
+        <div class="meta">
+          <span class="chip pack">Pack ${escapeHtml(p.pack || "-")}</span>
+          ${(p.tags || []).slice(0,4).map(t => `<span class="chip tag">#${escapeHtml(t)}</span>`).join("")}
+          <span class="chip">${escapeHtml(p.id)}</span>
+        </div>
+      `;
+      list.appendChild(div);
+    }
+  }
+
+  function setActive(id) {
+    const p = (state.data?.prompts || []).find(x => x.id === id);
+    if (!p) return;
+    state.activeId = id;
+
+    // initialize values
+    const next = {};
+    for (const v of (p.variables || [])) next[v.key] = state.values[v.key] ?? "";
+    state.values = next;
+
+    el("pTitle").textContent = p.title;
+    el("pTeaser").textContent = p.teaser || "";
+    renderVars();
+    renderOut();
+    renderList();
+  }
+
+  function renderVars() {
+    const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
+    const vars = el("vars");
+    vars.innerHTML = "";
+    if (!p) return;
+
+    for (const v of (p.variables || [])) {
+      const wrap = document.createElement("div");
+      wrap.className = "field";
+      const isLong = (v.placeholder || "").length > 45 || v.key === "draft" || v.key === "items" || v.key === "input";
+      const keyHint = (state.uiMode === "pro") ? ` <span class="small">（${escapeHtml(v.key)}）</span>` : "";
+      wrap.innerHTML = `
+        <label>${escapeHtml(v.label)}${keyHint}</label>
+        ${isLong
+          ? `<textarea data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}"></textarea>`
+          : `<input data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}" />`
+        }
+      `;
+      vars.appendChild(wrap);
+    }
+
+    // bind values
+    vars.querySelectorAll("input,textarea").forEach(inp => {
+      const k = inp.getAttribute("data-key");
+      inp.value = state.values[k] ?? "";
+      inp.addEventListener("input", () => {
+        state.values[k] = inp.value;
+        renderOut();
+      });
+    });
+  }
+
+  function renderOut() {
+    const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
+    if (!p) return;
+    el("out").textContent = compileTemplate(p.template, state.values);
+  }
+
+  async function loadData() {
+    // local storage first
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+      try {
+        state.data = JSON.parse(saved);
+        return;
+      } catch (e) { /* ignore */ }
+    }
+    // fallback to prompts.json
+    const r = await fetch("./prompts.json", { cache: "no-store" });
+    state.data = await r.json();
+  }
+
+  function persistData() {
+    localStorage.setItem(LS_KEY, JSON.stringify(state.data));
+  }
+
+  function escapeHtml(s) {
+    return (s ?? "").toString()
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function download(filename, text) {
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 500);
+  }
+
+  function openCopyModal(text) {
+    const modal = el("copyModal");
+    const area = el("fallbackCopyArea");
+    area.value = text;
+    modal.style.display = "flex";
+    modal.setAttribute("aria-hidden", "false");
+    // 盡量自動選取，讓使用者一鍵長按/複製
+    setTimeout(() => {
+      area.focus();
+      area.select();
+    }, 60);
+  }
+
+  function copyText(text) {
+    // clipboard API 在非安全環境（例如 http + 內網 IP）常會被禁用
+    const canClipboard = !!(navigator.clipboard && window.isSecureContext);
+
+    const fallbackCopy = () => {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        ta.remove();
+        if (ok) {
+          toast("已複製到剪貼簿");
+        } else {
+          openCopyModal(text);
+        }
+      } catch (e) {
+        openCopyModal(text);
+      }
+    };
+
+    if (!canClipboard) {
+      fallbackCopy();
+      return;
+    }
+
+    try {
+      navigator.clipboard.writeText(text)
+        .then(() => toast("已複製到剪貼簿"))
+        .catch(() => fallbackCopy());
+    } catch (e) {
+      fallbackCopy();
+    }
+  }
+
+  // event wiring
+  el("q").addEventListener("input", (e) => {
+    state.query = e.target.value || "";
+    renderList();
+  });
+
+  el("btnCopy").onclick = () => {
+    const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
+    if (!p) return;
+    copyText(compileTemplate(p.template, state.values));
+  };
+
+  el("btnCopyRaw").onclick = () => {
+    const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
+    if (!p) return;
+    copyText(p.template);
+  };
+
+  el("btnExport").onclick = () => {
+    const text = JSON.stringify(state.data, null, 2);
+    download("prompts.json", text);
+    toast("已匯出 prompts.json");
+  };
+
+  el("btnImport").onclick = () => el("fileInput").click();
+
+  el("fileInput").addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const obj = JSON.parse(text);
+      if (!obj || !Array.isArray(obj.prompts)) throw new Error("Invalid format");
+      state.data = obj;
+      persistData();
+      initUI();
+      toast("已匯入並儲存到本地");
+    } catch (err) {
+      toast("匯入失敗：請確認是 prompts.json");
+    } finally {
+      el("fileInput").value = "";
+    }
+  });
+
+  el("btnResetLocal").onclick = () => {
+    localStorage.removeItem(LS_KEY);
+    toast("已清除本地資料，重新載入 prompts.json");
+    setTimeout(() => location.reload(), 400);
+  };
+
+  function setMode(mode) {
+    const m = (mode === "pro") ? "pro" : "basic";
+    state.uiMode = m;
+    localStorage.setItem("pfl_ui_mode", m);
+    el("app").setAttribute("data-mode", m);
+    el("btnMode").textContent = (m === "basic") ? "新手模式：開" : "新手模式：關";
+    // 重新渲染，讓欄位標示跟著變化
+    if (state.activeId) setActive(state.activeId);
+    renderList();
+  }
+
+  el("btnMode").onclick = () => {
+    setMode(state.uiMode === "basic" ? "pro" : "basic");
+  };
+
+  // 複製失敗備援彈窗（特別是 Android / 非 HTTPS / 內網 IP）
+  el("btnCloseModal").onclick = () => {
+    const modal = el("copyModal");
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+  };
+  el("btnSelectAll").onclick = () => {
+    const ta = el("fallbackCopyArea");
+    ta.focus();
+    ta.select();
+    toast("已全選，請點『複製』或長按複製");
+  };
+
+  function initUI() {
+    setMode(state.uiMode);
+    const meta = state.data?.meta || {};
+    el("metaLine").textContent = `資料：${meta.name || "—"}｜版本：${meta.version || "—"}｜Pack：${meta.pack || "—"}`;
+    renderTabs();
+    // default active: first prompt
+    const first = (state.data?.prompts || [])[0];
+    state.activePack = "ALL";
+    state.activeId = first?.id || null;
+    renderList();
+    if (state.activeId) setActive(state.activeId);
+  }
+
+  // boot
+  loadData().then(() => initUI()).catch(() => {
+    el("pTitle").textContent = "載入失敗";
+    el("pTeaser").textContent = "請確認 prompts.json 與 index.html 在同一資料夾。";
+  });
+})();
+</script>
+</body>
+</html>

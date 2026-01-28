@@ -1,0 +1,257 @@
+{
+  "meta": {
+    "name": "提示詞公式庫",
+    "version": "v0.1",
+    "pack": "A",
+    "generated_at": "2026-01-27T13:13:18.441559Z"
+  },
+  "prompts": [
+    {
+      "id": "A-GAF",
+      "pack": "A",
+      "title": "一句話可控：目標/受眾/格式（GAF）",
+      "teaser": "把一句需求變成可控輸出",
+      "tags": [
+        "core",
+        "control",
+        "starter"
+      ],
+      "variables": [
+        {
+          "key": "task",
+          "label": "任務（要做什麼）",
+          "placeholder": "例如：生成 15 秒短片腳本，導流長片"
+        },
+        {
+          "key": "audience",
+          "label": "受眾（給誰看/用）",
+          "placeholder": "例如：AI 新手創作者"
+        },
+        {
+          "key": "format",
+          "label": "輸出格式（固定規格）",
+          "placeholder": "例如：時間碼 + 畫面字幕 + 口播 + CTA，總長 15 秒"
+        },
+        {
+          "key": "constraints",
+          "label": "限制（可留空）",
+          "placeholder": "例如：短句；每 2 秒一行字幕；避免誇張用語；不超過 90 字"
+        }
+      ],
+      "template": "你要幫我完成一個任務。\n目標：{{task}}\n受眾：{{audience}}\n輸出格式：{{format}}\n限制（可留空）：{{constraints}}\n\n請嚴格遵守『輸出格式』與『限制』。若資訊不足，先問我 2 個最關鍵問題（每題提供 A/B/C 選項），我回答後再開始輸出。"
+    },
+    {
+      "id": "A-Q3",
+      "pack": "A",
+      "title": "Q3：先問 3 題再做（避免亂猜）",
+      "teaser": "先釐清再產出，降低飄",
+      "tags": [
+        "clarify",
+        "control"
+      ],
+      "variables": [
+        {
+          "key": "task",
+          "label": "任務",
+          "placeholder": "例如：生成 YouTube 縮圖大字 + 標題"
+        },
+        {
+          "key": "context",
+          "label": "背景/素材（可留空）",
+          "placeholder": "例如：教學型頻道；內容是 PPT+配音；主題：ChatGPT 使用趨勢"
+        },
+        {
+          "key": "output",
+          "label": "你想要的輸出",
+          "placeholder": "例如：給我 10 組縮圖大字（3–6字）+ 10 個標題（不誇張可點）"
+        }
+      ],
+      "template": "你要幫我做：{{task}}\n背景/素材：{{context}}\n期望輸出：{{output}}\n\n在開始前，先問我 3 個最關鍵澄清問題（每題提供 A/B/C 選項，並說明不同選擇會如何影響結果）。\n等我回答後，再按我的選擇產出，並在輸出最上方先列出你採用的假設。"
+    },
+    {
+      "id": "A-TLDR",
+      "pack": "A",
+      "title": "先結論再展開：三句結論→細節",
+      "teaser": "先給 3 句結論，再展開與行動",
+      "tags": [
+        "summary",
+        "structure"
+      ],
+      "variables": [
+        {
+          "key": "topic",
+          "label": "主題",
+          "placeholder": "例如：ChatGPT 全球使用趨勢（NBER 34255）"
+        },
+        {
+          "key": "audience",
+          "label": "受眾",
+          "placeholder": "例如：一般創作者/新手"
+        },
+        {
+          "key": "constraints",
+          "label": "限制（可留空）",
+          "placeholder": "例如：避免行話；不引用未提供的數據；語氣理性"
+        }
+      ],
+      "template": "主題：{{topic}}\n受眾：{{audience}}\n限制：{{constraints}}\n\n請按以下順序輸出：\n1) 結論（3 句）：用 3 句話給結論（每句 ≤ 18 字）\n2) 展開（條列）：用條列展開（最多 7 點，每點 1 句）\n3) 下一步（3 條）：給我 3 條可執行行動（每條包含：動詞 + 具體產出）\n\n務必先結論後細節，不要鋪陳。"
+    },
+    {
+      "id": "A-Table",
+      "pack": "A",
+      "title": "先表格再解釋：資訊密度拉滿",
+      "teaser": "先結構化再解讀",
+      "tags": [
+        "table",
+        "compare",
+        "structure"
+      ],
+      "variables": [
+        {
+          "key": "question",
+          "label": "問題/任務",
+          "placeholder": "例如：比較 3 個短片標題版本，選出最能拉 CTR 的"
+        },
+        {
+          "key": "columns",
+          "label": "表格欄位",
+          "placeholder": "例如：選項、主張、受眾、好奇心、風險、建議用法、總分(1-10)"
+        },
+        {
+          "key": "items",
+          "label": "選項/素材（可貼上）",
+          "placeholder": "例如：A) ...\nB) ...\nC) ..."
+        }
+      ],
+      "template": "請先不要寫長文。\n任務：{{question}}\n表格欄位：{{columns}}\n素材/選項：\n{{items}}\n\n要求：\n1) 先輸出一個完整表格（欄位固定，內容精簡）\n2) 表格後再補 5 行重點解讀（每行 1 句）\n3) 最後給結論：選哪個 + 1 句原因 + 1 句風險"
+    },
+    {
+      "id": "A-Constraints",
+      "pack": "A",
+      "title": "限制包：讓回答不亂飛",
+      "teaser": "用必須/不可/格式/長度鎖住輸出",
+      "tags": [
+        "control",
+        "quality"
+      ],
+      "variables": [
+        {
+          "key": "task",
+          "label": "任務",
+          "placeholder": "例如：寫一段 YouTube 影片描述（導流長片）"
+        },
+        {
+          "key": "must",
+          "label": "必須（Must）",
+          "placeholder": "例如：第一行放長片連結；語氣理性；兩行內講完重點"
+        },
+        {
+          "key": "must_not",
+          "label": "不可（Must NOT）",
+          "placeholder": "例如：不要誇張詞；不要推測未給資料"
+        },
+        {
+          "key": "format",
+          "label": "格式（Format）",
+          "placeholder": "例如：3 行；每行 ≤ 28 字；含 3 個 hashtag"
+        },
+        {
+          "key": "input",
+          "label": "輸入/素材（可留空）",
+          "placeholder": "例如：主題、重點句、數據、連結"
+        }
+      ],
+      "template": "任務：{{task}}\n\n【Must】\n{{must}}\n\n【Must NOT】\n{{must_not}}\n\n【Format】\n{{format}}\n\n【Input】\n{{input}}\n\n請嚴格遵守 Must / Must NOT / Format。若 Input 不足以完成，先列出你缺的 3 項資料（用最短問題詢問）。"
+    },
+    {
+      "id": "A-RoleAudience",
+      "pack": "A",
+      "title": "角色×受眾：同內容換說法",
+      "teaser": "新手/主管/專家三版輸出",
+      "tags": [
+        "tone",
+        "audience",
+        "structure"
+      ],
+      "variables": [
+        {
+          "key": "topic",
+          "label": "主題",
+          "placeholder": "例如：Vibe Coding 是什麼？"
+        },
+        {
+          "key": "role",
+          "label": "你的角色（你要扮演誰）",
+          "placeholder": "例如：AI 產品顧問"
+        },
+        {
+          "key": "audiences",
+          "label": "受眾清單",
+          "placeholder": "例如：新手創作者；產品經理；工程師"
+        },
+        {
+          "key": "constraints",
+          "label": "限制（可留空）",
+          "placeholder": "例如：每版最多 120 字；給 1 個例子；避免行話"
+        }
+      ],
+      "template": "你是：{{role}}\n主題：{{topic}}\n受眾：{{audiences}}\n限制：{{constraints}}\n\n請分別輸出 3 個版本（每版都要：一句話定義 + 2 點要點 + 1 個例子）：\n1) 新手版（零基礎）\n2) 主管/決策者版（重點是價值與風險）\n3) 專家版（重點是方法與限制）\n\n同一主題但語氣與重點要明顯不同。"
+    },
+    {
+      "id": "A-Critique",
+      "pack": "A",
+      "title": "先挑錯再重寫：把普通稿變能用",
+      "teaser": "先找翻車點，再給修正版",
+      "tags": [
+        "edit",
+        "quality"
+      ],
+      "variables": [
+        {
+          "key": "goal",
+          "label": "目標（要變成什麼樣）",
+          "placeholder": "例如：更短、更可點、更像人話"
+        },
+        {
+          "key": "draft",
+          "label": "草稿/原文",
+          "placeholder": "貼上你現在的文案/腳本/提示詞"
+        },
+        {
+          "key": "constraints",
+          "label": "限制（可留空）",
+          "placeholder": "例如：保留事實；不要新增未提供資訊；語氣理性"
+        }
+      ],
+      "template": "目標：{{goal}}\n限制：{{constraints}}\n\n原文：\n{{draft}}\n\n請按以下順序輸出：\n1) 可能翻車點（5 點）：每點 1 句，具體指出哪裡不行\n2) 修正版：直接給可用版本\n3) 你改了什麼（3 點）：用最短句描述修改策略"
+    },
+    {
+      "id": "A-Score",
+      "pack": "A",
+      "title": "比較打分：決策表（可驗證選擇）",
+      "teaser": "把選擇變成可測試",
+      "tags": [
+        "compare",
+        "decision"
+      ],
+      "variables": [
+        {
+          "key": "options",
+          "label": "選項",
+          "placeholder": "例如：A) 標題...\nB) 標題...\nC) 標題..."
+        },
+        {
+          "key": "criteria",
+          "label": "評分標準",
+          "placeholder": "例如：清晰度、好奇心、受眾匹配、可信度、可搜尋關鍵詞、風險（每項 1-10）"
+        },
+        {
+          "key": "context",
+          "label": "場景/目標",
+          "placeholder": "例如：YouTube 教學頻道；目標拉 CTR；語氣不誇張"
+        }
+      ],
+      "template": "場景/目標：{{context}}\n評分標準：{{criteria}}\n選項：\n{{options}}\n\n請輸出：\n1) 評分表（每個選項對每項標準 1–10 分 + 1 句理由）\n2) 總分排序\n3) 結論：建議用哪個（並給 1 個備案）\n4) 最小化風險的改寫：把第一名再改成更穩的版本 1 個"
+    }
+  ]
+}
