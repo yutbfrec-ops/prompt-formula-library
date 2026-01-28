@@ -152,7 +152,7 @@
   </style>
 </head>
 <body>
-  <div class="wrap" id="app" data-mode="lite">
+  <div class="wrap" id="app" data-mode="pro">
     <div class="top">
       <div class="brand">
         <h1>Prompt Formula Library（提示詞公式庫）｜Pro / Lite 雙模式</h1>
@@ -309,7 +309,7 @@
     activeId: null,
     query: "",
     values: {},
-    uiMode: (localStorage.getItem(UI_MODE_KEY) || "lite"),
+    uiMode: (localStorage.getItem(UI_MODE_KEY) || "pro"),
   };
   const debugState = {
     fetchStatus: "idle",
