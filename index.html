@@ -618,18 +618,33 @@
     }
   }
 
-  function getOutputText(mode, template, values) {
-    const base = compileTemplate(template, values).trim();
+  function applyLitePreamble(template) {
+    const litePreamble = "請依我填的內容，直接產出可使用的成品。若資訊不足，先問我 2 個問題再開始。\n\n";
+    const lines = (template || "").split("\n");
+    const firstLine = (lines[0] || "").trim();
+    const shouldSwap = firstLine
+      && !firstLine.includes("{{")
+      && !firstLine.includes("：")
+      && /[。！？]$/.test(firstLine);
+    if (shouldSwap) {
+      return `${litePreamble}${lines.slice(1).join("\n")}`;
+    }
+    return `${litePreamble}${template || ""}`;
+  }
+
+  function getOutputText(mode, prompt, values) {
+    const template = prompt?.template || "";
+    const baseTemplate = mode === "lite" ? applyLitePreamble(template) : template;
+    const base = compileTemplate(baseTemplate, values).trim();
     if (mode !== "lite") return base;
-    const litePreamble = "請用白話協助我完成以下需求，資訊不足就先問我再開始輸出。\n\n";
-    return `${litePreamble}${base}`;
+    return base;
   }
 
   function renderOut() {
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
     if (!p) return;
     const out = el("out");
-    if (out) out.textContent = getOutputText(state.uiMode, p.template, state.values);
+    if (out) out.textContent = getOutputText(state.uiMode, p, state.values);
     updateCopyDiagnostics(p);
   }
   
@@ -642,8 +657,8 @@
     const liteCopyEl = el("debugCopyLite");
     const proCopyEl = el("debugCopyPro");
     if (!liteCopyEl && !proCopyEl) return;
-    const liteText = p ? getOutputText("lite", p.template, state.values) : "";
-    const proText = p ? getOutputText("pro", p.template, state.values) : "";
+    const liteText = p ? getOutputText("lite", p, state.values) : "";
+    const proText = p ? getOutputText("pro", p, state.values) : "";
     if (liteCopyEl) liteCopyEl.textContent = truncatePreview(liteText);
     if (proCopyEl) proCopyEl.textContent = truncatePreview(proText);
   }
@@ -770,7 +785,7 @@
     btnCopy.onclick = () => {
       const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
       if (!p) return;
-      copyText(getOutputText(state.uiMode, p.template, state.values));
+      copyText(getOutputText(state.uiMode, p, state.values));
     };
   }
 
