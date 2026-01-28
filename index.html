@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>提示詞公式庫（v0.1.1 Pack A）</title>
+  <title>生活小幫手模板庫（Pack A v0.1）</title>
   <style>
     :root{
       --bg:#0b0f14; --panel:#111824; --muted:#7f8ea3; --text:#e8eef7;
@@ -68,8 +68,21 @@
     .chip{background:var(--chip);border:1px solid rgba(255,255,255,.05);color:var(--muted);font-size:11px;padding:4px 8px;border-radius:999px}
     .chip.pack{color:#c7d2fe;border-color:rgba(199,210,254,.18)}
     .chip.tag{color:#a7f3d0;border-color:rgba(167,243,208,.15)}
+    .code{font-size:11px;color:var(--muted)}
     /* 新手模式：隱藏技術標籤，避免資訊噪音 */
     .wrap[data-mode="basic"] .chip{display:none}
+    .info-card{
+      margin-top:14px;border:1px solid var(--line);border-radius:16px;padding:14px;
+      background:rgba(15,23,42,.55);display:grid;gap:12px;
+    }
+    .info-card h3{margin:0;font-size:14px}
+    .info-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}
+    .example-list{display:flex;gap:10px;flex-wrap:wrap}
+    .example-btn{
+      border:1px dashed rgba(125,211,252,.4);background:rgba(11,15,20,.6);color:var(--text);
+      padding:8px 10px;border-radius:12px;font-size:12px;cursor:pointer;
+    }
+    .example-btn:hover{border-color:rgba(125,211,252,.7)}
     .content{padding:16px}
     .title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .title h2{margin:0;font-size:18px}
@@ -119,18 +132,25 @@
     .divider{height:1px;background:var(--line);margin:14px 0}
     .footer{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.4}
     .kbd{font-family:var(--mono);font-size:11px;color:#cbd5e1;background:rgba(11,15,20,.6);border:1px solid rgba(255,255,255,.06);padding:2px 6px;border-radius:8px}
+    .fold{border:1px dashed rgba(255,255,255,.08);border-radius:14px;padding:10px;background:rgba(11,15,20,.35)}
+    .fold summary{cursor:pointer;font-size:12px;color:var(--muted);list-style:none}
+    .checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+    .check-item{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+    .guide-steps{margin:8px 0 0 0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.5}
+    .guide-steps li{margin-bottom:6px}
   </style>
 </head>
 <body>
   <div class="wrap" id="app" data-mode="basic">
     <div class="top">
       <div class="brand">
-        <h1>提示詞公式庫</h1>
-        <div class="sub">填 2–3 格 → 複製 → 貼到 ChatGPT / Gemini / 任何 AI 工具</div>
+        <h1>生活小幫手模板庫</h1>
+        <div class="sub">選一個情境 → 填 2–3 格 → 複製 → 貼到 ChatGPT / Gemini</div>
         <div class="small" id="metaLine"></div>
       </div>
       <div class="actions">
         <button class="btn primary" id="btnMode">新手模式：開</button>
+        <button class="btn" id="btnQuickStart">快速上手</button>
         <details class="btn" style="padding:0">
           <summary class="btn" style="list-style:none;user-select:none">資料</summary>
           <div style="position:absolute;right:0;margin-top:8px;min-width:220px;z-index:50">
@@ -157,7 +177,7 @@
         <div class="toolbar">
           <div class="search">
             <span class="small">🔎</span>
-            <input id="q" placeholder="搜尋：GAF / TL;DR / 表格 / 限制 / 審稿…" />
+            <input id="q" placeholder="搜尋：生日祝福 / 邀請 / 感謝 / 貼文…" />
           </div>
           <div class="tabs" id="tabs"></div>
         </div>
@@ -176,6 +196,16 @@
               <button class="btn" id="btnCopyRaw">複製模板（不替換）</button>
             </div>
           </div>
+          <div class="info-card" id="infoCard">
+            <div>
+              <h3>這個模板可以幫你做什麼</h3>
+              <p id="purposeText">—</p>
+            </div>
+            <div>
+              <div class="small" style="margin-bottom:6px">生活例子（點一下直接填入）</div>
+              <div class="example-list" id="exampleList"></div>
+            </div>
+          </div>
           <div class="status" id="statusBar">
             <strong id="statusText">載入中…</strong>
             <button class="btn" id="btnRetry">重試</button>
@@ -185,8 +215,8 @@
 
           <div class="outwrap">
             <div class="outhead">
-              <div class="hint">輸出預覽（會用你填的變數替換 <span class="kbd">{{variable}}</span>）</div>
-              <div class="small">小技巧：先用 <span class="kbd">Q3</span>（先問問題）或 <span class="kbd">限制包</span>，可控度會大幅上升</div>
+              <div class="hint">輸出預覽（會套用你填的內容）</div>
+              <div class="small">小技巧：讓 AI 先問你幾個問題，或加上規則，通常會更穩定。</div>
             </div>
             <pre id="out"></pre>
           </div>
@@ -208,6 +238,20 @@
         <div class="row">
           <button class="btn" id="btnSelectAll">全選</button>
           <button class="btn primary" id="btnCloseModal">關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="quickModal" aria-hidden="true">
+      <div class="box">
+        <h3>快速上手（3 步驟）</h3>
+        <ol class="guide-steps">
+          <li>選一個情境模板，填 2–3 個欄位（看不到的可先略過）。</li>
+          <li>按「一鍵 Copy」或「複製模板（不替換）」。</li>
+          <li>貼到 ChatGPT / Gemini，按送出。</li>
+        </ol>
+        <div class="row">
+          <button class="btn primary" id="btnCloseQuick">知道了</button>
         </div>
       </div>
     </div>
@@ -243,6 +287,24 @@
     promptCount: 0,
     lastError: "—",
   };
+
+  const BASIC_FIELDS = {
+    "A-GAF": { primary: ["task", "audience"], advanced: ["format", "constraints"] },
+    "A-Q3": { primary: ["task", "output"], advanced: ["context"] },
+    "A-TLDR": { primary: ["topic"], advanced: ["audience", "constraints"] },
+    "A-Table": { primary: ["question", "items"], advanced: ["columns"] },
+    "A-Constraints": { primary: ["task", "must"], advanced: ["must_not", "format", "input"] },
+    "A-RoleAudience": { primary: ["topic", "audiences"], advanced: ["role", "constraints"] },
+    "A-Critique": { primary: ["draft", "goal"], advanced: ["constraints"] },
+    "A-Decision": { primary: ["context", "options"], advanced: ["criteria"] },
+  };
+  const CONSTRAINT_PRESETS = [
+    "短一點",
+    "更有禮貌",
+    "不要浮誇",
+    "給 3 版",
+    "加 emoji",
+  ];
 
   const normalize = (s) => (s || "").toString().toLowerCase();
 
@@ -326,7 +388,7 @@
         <div class="meta">
           <span class="chip pack">Pack ${escapeHtml(p.pack || "-")}</span>
           ${(p.tags || []).slice(0,4).map(t => `<span class="chip tag">#${escapeHtml(t)}</span>`).join("")}
-          <span class="chip">${escapeHtml(p.id)}</span>
+          <span class="code" title="公式代號">${escapeHtml(p.id)}</span>
         </div>
       `;
       list.appendChild(div);
@@ -347,9 +409,66 @@
     const teaserEl = el("pTeaser");
     if (titleEl) titleEl.textContent = p.title;
     if (teaserEl) teaserEl.textContent = p.teaser || "";
+    renderInfo(p);
     renderVars();
     renderOut();
     renderList();
+  }
+
+  function createField(v, options = {}) {
+    const wrap = document.createElement("div");
+    wrap.className = "field";
+    const isLong = (v.placeholder || "").length > 45 || ["draft", "items", "input", "options"].includes(v.key);
+    const keyHint = (state.uiMode === "pro") ? ` <span class="small">（${escapeHtml(v.key)}）</span>` : "";
+    wrap.innerHTML = `
+      <label>${escapeHtml(options.label || v.label)}${keyHint}</label>
+      ${isLong
+        ? `<textarea data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}"></textarea>`
+        : `<input data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}" />`
+      }
+    `;
+    return wrap;
+  }
+
+  function renderConstraintQuick(vars, vMap) {
+    const wrap = document.createElement("div");
+    wrap.className = "field";
+    const mustKey = vMap.must?.key || "must";
+    wrap.innerHTML = `
+      <label>常用限制（可勾選/可編輯）</label>
+      <div class="checklist">
+        ${CONSTRAINT_PRESETS.map((label, idx) => `
+          <label class="check-item">
+            <input type="checkbox" data-preset="${idx}" />
+            ${escapeHtml(label)}
+          </label>
+        `).join("")}
+      </div>
+      <textarea data-key="${escapeHtml(mustKey)}" placeholder="${escapeHtml(vMap.must?.placeholder || "")}"></textarea>
+      <div class="small" style="margin-top:6px">可直接改寫，上面勾選只是一個快速起手式。</div>
+    `;
+    vars.appendChild(wrap);
+
+    const textarea = wrap.querySelector(`textarea[data-key="${mustKey}"]`);
+    if (textarea) {
+      textarea.value = state.values[mustKey] ?? "";
+      textarea.addEventListener("input", () => {
+        state.values[mustKey] = textarea.value;
+        renderOut();
+      });
+    }
+    wrap.querySelectorAll("input[type=\"checkbox\"]").forEach((cb) => {
+      cb.addEventListener("change", () => {
+        const selections = [];
+        wrap.querySelectorAll("input[type=\"checkbox\"]").forEach((c, idx) => {
+          if (c.checked) selections.push(CONSTRAINT_PRESETS[idx]);
+        });
+        const next = selections.join("；");
+        state.values[mustKey] = next;
+        if (textarea) textarea.value = next;
+        renderOut();
+      });
+    });
   }
 
   function renderVars() {
@@ -359,30 +478,83 @@
     vars.innerHTML = "";
     if (!p) return;
 
-    for (const v of (p.variables || [])) {
-      const wrap = document.createElement("div");
-      wrap.className = "field";
-      const isLong = (v.placeholder || "").length > 45 || v.key === "draft" || v.key === "items" || v.key === "input";
-      const keyHint = (state.uiMode === "pro") ? ` <span class="small">（${escapeHtml(v.key)}）</span>` : "";
-      wrap.innerHTML = `
-        <label>${escapeHtml(v.label)}${keyHint}</label>
-        ${isLong
-          ? `<textarea data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}"></textarea>`
-          : `<input data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}" />`
+    const vMap = {};
+    for (const v of (p.variables || [])) vMap[v.key] = v;
+
+    const isBasic = state.uiMode === "basic";
+    const config = BASIC_FIELDS[p.id] || {};
+    const primaryKeys = config.primary || (p.variables || []).map(v => v.key);
+    const advancedKeys = config.advanced || [];
+
+    if (!isBasic) {
+      for (const v of (p.variables || [])) vars.appendChild(createField(v));
+    } else {
+      for (const key of primaryKeys) {
+        const v = vMap[key];
+        if (!v) continue;
+        if (p.id === "A-Constraints" && key === "must") {
+          renderConstraintQuick(vars, vMap);
+          continue;
         }
-      `;
-      vars.appendChild(wrap);
+        vars.appendChild(createField(v, { label: p.id === "A-TLDR" && key === "topic" ? "主題/要點" : v.label }));
+      }
+      if (advancedKeys.length) {
+        const fold = document.createElement("details");
+        fold.className = "fold";
+        fold.innerHTML = `<summary>展開更多</summary>`;
+        const inner = document.createElement("div");
+        inner.className = "grid";
+        for (const key of advancedKeys) {
+          const v = vMap[key];
+          if (!v) continue;
+          inner.appendChild(createField(v));
+        }
+        fold.appendChild(inner);
+        vars.appendChild(fold);
+      }
     }
 
     // bind values
     vars.querySelectorAll("input,textarea").forEach(inp => {
       const k = inp.getAttribute("data-key");
+      if (!k) return;
       inp.value = state.values[k] ?? "";
       inp.addEventListener("input", () => {
         state.values[k] = inp.value;
         renderOut();
       });
     });
+  }
+
+  function renderInfo(p) {
+    const purposeText = el("purposeText");
+    const exampleList = el("exampleList");
+    if (purposeText) purposeText.textContent = p?.teaser || "—";
+    if (!exampleList) return;
+    exampleList.innerHTML = "";
+    const examples = p?.examples || [];
+    if (!examples.length) {
+      const empty = document.createElement("div");
+      empty.className = "small";
+      empty.textContent = "暫無生活例子";
+      exampleList.appendChild(empty);
+      return;
+    }
+    for (const example of examples.slice(0, 2)) {
+      const btn = document.createElement("button");
+      btn.className = "example-btn";
+      btn.textContent = example.label || "套用例子";
+      btn.onclick = () => {
+        const next = {};
+        for (const v of (p.variables || [])) {
+          next[v.key] = example.values?.[v.key] ?? "";
+        }
+        state.values = next;
+        renderVars();
+        renderOut();
+      };
+      exampleList.appendChild(btn);
+    }
   }
 
   function renderOut() {
@@ -477,9 +649,11 @@
         if (ok) {
           toast("已複製到剪貼簿");
         } else {
+          toast("複製失敗，請手動複製");
           openCopyModal(text);
         }
       } catch (e) {
+        toast("複製失敗，請手動複製");
         openCopyModal(text);
       }
     };
@@ -690,6 +864,25 @@
   const btnRetry = el("btnRetry");
   if (btnRetry) {
     btnRetry.onclick = () => boot();
+  }
+
+  const btnQuickStart = el("btnQuickStart");
+  if (btnQuickStart) {
+    btnQuickStart.onclick = () => {
+      const modal = el("quickModal");
+      if (!modal) return;
+      modal.style.display = "flex";
+      modal.setAttribute("aria-hidden", "false");
+    };
+  }
+  const btnCloseQuick = el("btnCloseQuick");
+  if (btnCloseQuick) {
+    btnCloseQuick.onclick = () => {
+      const modal = el("quickModal");
+      if (!modal) return;
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+    };
   }
 
   document.addEventListener("DOMContentLoaded", () => {
