@@ -156,7 +156,7 @@
     <div class="top">
       <div class="brand">
         <h1>提示詞公式庫</h1>
-        <div class="sub">選一個模板 → 填 2–3 格 → 複製 → 貼到 ChatGPT / LLM（Pro / Lite 皆適用）</div>
+        <div class="sub">提示詞公式庫｜Pro / Lite 雙模式（填好後貼到 ChatGPT / LLM）</div>
         <div class="small" id="metaLine"></div>
       </div>
       <div class="actions">
@@ -265,7 +265,7 @@
         <ol class="guide-steps">
           <li>選一個情境模板，填 2–3 個欄位（看不到的可先略過）。</li>
           <li>按「複製：貼到 ChatGPT/LLM」或「複製模板（不替換）」。</li>
-          <li>貼到 ChatGPT / Gemini，按送出。</li>
+          <li>貼到 ChatGPT / LLM，按送出。</li>
         </ol>
         <div class="row">
           <button class="btn primary" id="btnCloseQuick">知道了</button>
@@ -584,18 +584,19 @@
     }
   }
 
-  function renderOut() {
+  function buildOutputText() {
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
-    if (!p) return;
-    const out = el("out");
-    if (out) {
-      const base = compileTemplate(p.template, state.values);
-      if (state.uiMode === "lite") {
-        out.textContent = `請依我填的內容，直接產出可使用的成品。若資訊不足，先問我 2 個問題再開始。\n\n${base}`;
-      } else {
-        out.textContent = base;
-      }
+    if (!p) return "";
+    const base = compileTemplate(p.template, state.values);
+    if (state.uiMode === "lite") {
+      return `請依我填的內容，直接產出可使用的成品。若資訊不足，先問我 2 個問題再開始。\n\n${base}`;
     }
+    return base;
+  }
+
+  function renderOut() {
+    const out = el("out");
+    if (out) out.textContent = buildOutputText();
     const liteHint = el("liteHint");
     if (liteHint) liteHint.style.display = state.uiMode === "lite" ? "block" : "none";
   }
@@ -722,7 +723,7 @@
     btnCopy.onclick = () => {
       const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
       if (!p) return;
-      copyText(compileTemplate(p.template, state.values));
+      copyText(buildOutputText());
     };
   }
 
