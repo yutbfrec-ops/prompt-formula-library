@@ -179,6 +179,8 @@
                 <div><strong>prompts.json</strong>：<span id="debugFetch">—</span></div>
                 <div><strong>模板數量</strong>：<span id="debugCount">—</span></div>
                 <div><strong>最後錯誤</strong>：<span id="debugError">—</span></div>
+                <div><strong>Lite copy</strong>：<span id="debugCopyLite">—</span></div>
+                <div><strong>Pro copy</strong>：<span id="debugCopyPro">—</span></div>
               </div>
             </div>
           </div>
@@ -584,9 +586,9 @@
     }
   }
 
-  function buildPrompt(p) {
-    const base = compileTemplate(p.template, state.values).trim();
-    if (state.uiMode !== "lite") return base;
+  function getOutputText(mode, template, values) {
+    const base = compileTemplate(template, values).trim();
+    if (mode !== "lite") return base;
     const litePreamble = "請你用自然口吻協助我完成以下需求。若資訊不足，先向我確認再開始輸出。\n\n";
     return `${litePreamble}${base}`;
   }
@@ -595,7 +597,23 @@
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
     if (!p) return;
     const out = el("out");
-    if (out) out.textContent = buildPrompt(p);
+    if (out) out.textContent = getOutputText(state.uiMode, p.template, state.values);
+    updateCopyDiagnostics(p);
+  }
+  
+  function truncatePreview(text, max = 120) {
+    if (!text) return "—";
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
+
+  function updateCopyDiagnostics(p) {
+    const liteCopyEl = el("debugCopyLite");
+    const proCopyEl = el("debugCopyPro");
+    if (!liteCopyEl && !proCopyEl) return;
+    const liteText = p ? getOutputText("lite", p.template, state.values) : "";
+    const proText = p ? getOutputText("pro", p.template, state.values) : "";
+    if (liteCopyEl) liteCopyEl.textContent = truncatePreview(liteText);
+    if (proCopyEl) proCopyEl.textContent = truncatePreview(proText);
   }
 
   function validateData(obj) {
@@ -720,7 +738,7 @@
     btnCopy.onclick = () => {
       const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
       if (!p) return;
-      copyText(buildPrompt(p));
+      copyText(getOutputText(state.uiMode, p.template, state.values));
     };
   }
 
