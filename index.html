@@ -95,6 +95,18 @@
       box-shadow: var(--shadow);color:var(--text);display:none;
     }
     .toast.show{display:block}
+    .status{
+      margin:12px 0 0 0;padding:10px 12px;border:1px dashed rgba(125,211,252,.35);
+      background:rgba(15,23,42,.55);border-radius:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+      color:var(--muted);font-size:13px;
+    }
+    .status strong{color:var(--text);font-weight:600}
+    .status.hidden{display:none}
+    .status .btn{padding:6px 10px;font-size:12px}
+    .debug{
+      margin-top:10px;border-top:1px solid var(--line);padding-top:10px;color:var(--muted);font-size:12px;line-height:1.5;
+    }
+    .debug strong{color:var(--text)}
 
     /* 低相容性複製備援：彈窗讓使用者長按複製 */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:120}
@@ -129,6 +141,11 @@
                 <button class="btn" id="btnImport">匯入</button>
                 <button class="btn" id="btnReset">重置本地</button>
               </div>
+              <div class="debug" id="debugPanel">
+                <div><strong>prompts.json</strong>：<span id="debugFetch">—</span></div>
+                <div><strong>模板數量</strong>：<span id="debugCount">—</span></div>
+                <div><strong>最後錯誤</strong>：<span id="debugError">—</span></div>
+              </div>
             </div>
           </div>
         </details>
@@ -158,6 +175,10 @@
               <button class="btn primary" id="btnCopy">一鍵 Copy</button>
               <button class="btn" id="btnCopyRaw">複製模板（不替換）</button>
             </div>
+          </div>
+          <div class="status" id="statusBar">
+            <strong id="statusText">載入中…</strong>
+            <button class="btn" id="btnRetry">重試</button>
           </div>
 
           <div class="grid" id="vars"></div>
@@ -199,6 +220,7 @@
 <script>
 (() => {
   const LS_KEY = "pfl_prompts_json_v1";
+  const LOAD_TIMEOUT_MS = 2500;
 
   const el = (id) => document.getElementById(id);
   const toast = (msg) => {
@@ -216,8 +238,32 @@
     values: {},
     uiMode: (localStorage.getItem("pfl_ui_mode") || "basic"),
   };
+  const debugState = {
+    fetchStatus: "idle",
+    promptCount: 0,
+    lastError: "—",
+  };
 
   const normalize = (s) => (s || "").toString().toLowerCase();
+
+  function updateDebug() {
+    const fetchEl = el("debugFetch");
+    const countEl = el("debugCount");
+    const errEl = el("debugError");
+    if (fetchEl) fetchEl.textContent = debugState.fetchStatus;
+    if (countEl) countEl.textContent = String(debugState.promptCount ?? 0);
+    if (errEl) errEl.textContent = debugState.lastError || "—";
+  }
+
+  function setStatus(message, showRetry = false) {
+    const bar = el("statusBar");
+    const textEl = el("statusText");
+    const retry = el("btnRetry");
+    if (!bar || !textEl) return;
+    textEl.textContent = message;
+    bar.classList.toggle("hidden", !message);
+    if (retry) retry.style.display = showRetry ? "inline-flex" : "none";
+  }
 
   function compileTemplate(tpl, values) {
     return (tpl || "").replace(/\{\{(\w+)\}\}/g, (_, k) => (values[k] ?? ""));
@@ -231,6 +277,7 @@
 
   function renderTabs() {
     const tabs = el("tabs");
+    if (!tabs) return;
     tabs.innerHTML = "";
     for (const p of packsFromData(state.data)) {
       const b = document.createElement("button");
@@ -255,6 +302,7 @@
 
   function renderList() {
     const list = el("list");
+    if (!list) return;
     list.innerHTML = "";
 
     const items = (state.data?.prompts || [])
@@ -295,8 +343,10 @@
     for (const v of (p.variables || [])) next[v.key] = state.values[v.key] ?? "";
     state.values = next;
 
-    el("pTitle").textContent = p.title;
-    el("pTeaser").textContent = p.teaser || "";
+    const titleEl = el("pTitle");
+    const teaserEl = el("pTeaser");
+    if (titleEl) titleEl.textContent = p.title;
+    if (teaserEl) teaserEl.textContent = p.teaser || "";
     renderVars();
     renderOut();
     renderList();
@@ -305,6 +355,7 @@
   function renderVars() {
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
     const vars = el("vars");
+    if (!vars) return;
     vars.innerHTML = "";
     if (!p) return;
 
@@ -337,7 +388,15 @@
   function renderOut() {
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
     if (!p) return;
-    el("out").textContent = compileTemplate(p.template, state.values);
+    const out = el("out");
+    if (out) out.textContent = compileTemplate(p.template, state.values);
+  }
+
+  function validateData(obj) {
+    if (!obj || !Array.isArray(obj.prompts)) {
+      throw new Error("prompts.json 格式不正確");
+    }
+    return obj;
   }
 
   async function loadData() {
@@ -345,13 +404,21 @@
     const saved = localStorage.getItem(LS_KEY);
     if (saved) {
       try {
-        state.data = JSON.parse(saved);
-        return;
+        const parsed = validateData(JSON.parse(saved));
+        return { data: parsed, source: "localStorage" };
       } catch (e) { /* ignore */ }
     }
     // fallback to prompts.json
-    const r = await fetch("./prompts.json", { cache: "no-store" });
-    state.data = await r.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
+    try {
+      const r = await fetch("./prompts.json", { cache: "no-store", signal: controller.signal });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const json = await r.json();
+      return { data: validateData(json), source: "prompts.json" };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   function persistData() {
@@ -432,54 +499,75 @@
   }
 
   // event wiring
-  el("q").addEventListener("input", (e) => {
-    state.query = e.target.value || "";
-    renderList();
-  });
+  const searchInput = el("q");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      state.query = e.target.value || "";
+      renderList();
+    });
+  }
 
-  el("btnCopy").onclick = () => {
-    const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
-    if (!p) return;
-    copyText(compileTemplate(p.template, state.values));
-  };
+  const btnCopy = el("btnCopy");
+  if (btnCopy) {
+    btnCopy.onclick = () => {
+      const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
+      if (!p) return;
+      copyText(compileTemplate(p.template, state.values));
+    };
+  }
 
-  el("btnCopyRaw").onclick = () => {
-    const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
-    if (!p) return;
-    copyText(p.template);
-  };
+  const btnCopyRaw = el("btnCopyRaw");
+  if (btnCopyRaw) {
+    btnCopyRaw.onclick = () => {
+      const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
+      if (!p) return;
+      copyText(p.template);
+    };
+  }
 
-  el("btnExport").onclick = () => {
-    const text = JSON.stringify(state.data, null, 2);
-    download("prompts.json", text);
-    toast("已匯出 prompts.json");
-  };
+  const btnExport = el("btnExport");
+  if (btnExport) {
+    btnExport.onclick = () => {
+      const text = JSON.stringify(state.data, null, 2);
+      download("prompts.json", text);
+      toast("已匯出 prompts.json");
+    };
+  }
 
-  el("btnImport").onclick = () => el("fileInput").click();
+  const btnImport = el("btnImport");
+  if (btnImport) {
+    btnImport.onclick = () => el("fileInput")?.click();
+  }
 
-  el("fileInput").addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const obj = JSON.parse(text);
-      if (!obj || !Array.isArray(obj.prompts)) throw new Error("Invalid format");
-      state.data = obj;
-      persistData();
-      initUI();
-      toast("已匯入並儲存到本地");
-    } catch (err) {
-      toast("匯入失敗：請確認是 prompts.json");
-    } finally {
-      el("fileInput").value = "";
-    }
-  });
+  const fileInput = el("fileInput");
+  if (fileInput) {
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const obj = JSON.parse(text);
+        if (!obj || !Array.isArray(obj.prompts)) throw new Error("Invalid format");
+        state.data = obj;
+        persistData();
+        initUI();
+        toast("已匯入並儲存到本地");
+      } catch (err) {
+        toast("匯入失敗：請確認是 prompts.json");
+      } finally {
+        el("fileInput").value = "";
+      }
+    });
+  }
 
-  el("btnResetLocal").onclick = () => {
-    localStorage.removeItem(LS_KEY);
-    toast("已清除本地資料，重新載入 prompts.json");
-    setTimeout(() => location.reload(), 400);
-  };
+  const btnResetLocal = el("btnReset");
+  if (btnResetLocal) {
+    btnResetLocal.onclick = () => {
+      localStorage.removeItem(LS_KEY);
+      toast("已清除本地資料，重新載入 prompts.json");
+      setTimeout(() => location.reload(), 400);
+    };
+  }
 
   function setMode(mode) {
     const m = (mode === "pro") ? "pro" : "basic";
@@ -492,27 +580,39 @@
     renderList();
   }
 
-  el("btnMode").onclick = () => {
-    setMode(state.uiMode === "basic" ? "pro" : "basic");
-  };
+  const btnMode = el("btnMode");
+  if (btnMode) {
+    btnMode.onclick = () => {
+      setMode(state.uiMode === "basic" ? "pro" : "basic");
+    };
+  }
 
   // 複製失敗備援彈窗（特別是 Android / 非 HTTPS / 內網 IP）
-  el("btnCloseModal").onclick = () => {
-    const modal = el("copyModal");
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true");
-  };
-  el("btnSelectAll").onclick = () => {
-    const ta = el("fallbackCopyArea");
-    ta.focus();
-    ta.select();
-    toast("已全選，請點『複製』或長按複製");
-  };
+  const btnCloseModal = el("btnCloseModal");
+  if (btnCloseModal) {
+    btnCloseModal.onclick = () => {
+      const modal = el("copyModal");
+      if (!modal) return;
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+    };
+  }
+  const btnSelectAll = el("btnSelectAll");
+  if (btnSelectAll) {
+    btnSelectAll.onclick = () => {
+      const ta = el("fallbackCopyArea");
+      if (!ta) return;
+      ta.focus();
+      ta.select();
+      toast("已全選，請點『複製』或長按複製");
+    };
+  }
 
   function initUI() {
     setMode(state.uiMode);
     const meta = state.data?.meta || {};
-    el("metaLine").textContent = `資料：${meta.name || "—"}｜版本：${meta.version || "—"}｜Pack：${meta.pack || "—"}`;
+    const metaLine = el("metaLine");
+    if (metaLine) metaLine.textContent = `資料：${meta.name || "—"}｜版本：${meta.version || "—"}｜Pack：${meta.pack || "—"}`;
     renderTabs();
     // default active: first prompt
     const first = (state.data?.prompts || [])[0];
@@ -522,10 +622,78 @@
     if (state.activeId) setActive(state.activeId);
   }
 
-  // boot
-  loadData().then(() => initUI()).catch(() => {
-    el("pTitle").textContent = "載入失敗";
-    el("pTeaser").textContent = "請確認 prompts.json 與 index.html 在同一資料夾。";
+  function resetViewForLoading() {
+    const list = el("list");
+    const vars = el("vars");
+    const out = el("out");
+    const tabs = el("tabs");
+    const title = el("pTitle");
+    const teaser = el("pTeaser");
+    if (list) list.innerHTML = "";
+    if (vars) vars.innerHTML = "";
+    if (out) out.textContent = "";
+    if (tabs) tabs.innerHTML = "";
+    if (title) title.textContent = "載入中…";
+    if (teaser) teaser.textContent = "";
+  }
+
+  async function boot() {
+    resetViewForLoading();
+    debugState.fetchStatus = "loading";
+    debugState.lastError = "—";
+    debugState.promptCount = 0;
+    updateDebug();
+    setStatus("載入中…", false);
+
+    let localWarning = "";
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+      try {
+        validateData(JSON.parse(saved));
+      } catch (e) {
+        localWarning = "本地資料損壞，已改讀 prompts.json";
+      }
+    }
+
+    try {
+      const result = await loadData();
+      state.data = result.data;
+      debugState.fetchStatus = `ok (${result.source})`;
+      debugState.promptCount = (state.data?.prompts || []).length;
+      if (localWarning) debugState.lastError = localWarning;
+      updateDebug();
+      if (localWarning) toast(localWarning);
+
+      if (!debugState.promptCount) {
+        setStatus("找不到任何模板。你可以按「匯入」載入 prompts.json，或按重試。", true);
+        return;
+      }
+
+      initUI();
+      setStatus("", false);
+    } catch (err) {
+      const isAbort = err?.name === "AbortError";
+      const message = isAbort
+        ? "讀取逾時（可能是網路或快取問題），請按重試。"
+        : `讀取失敗：${err?.message || "未知錯誤"}（可按重試）`;
+      debugState.fetchStatus = "error";
+      debugState.lastError = err?.message || String(err);
+      updateDebug();
+      setStatus(message, true);
+      const title = el("pTitle");
+      const teaser = el("pTeaser");
+      if (title) title.textContent = "讀取失敗";
+      if (teaser) teaser.textContent = "";
+    }
+  }
+
+  const btnRetry = el("btnRetry");
+  if (btnRetry) {
+    btnRetry.onclick = () => boot();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    boot();
   });
 })();
 </script>
