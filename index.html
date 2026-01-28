@@ -209,7 +209,7 @@
               <p id="pTeaser"></p>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button class="btn primary" id="btnCopy">複製提示詞</button>
+              <button class="btn primary" id="btnCopy">複製：貼到 ChatGPT/LLM</button>
               <button class="btn" id="btnCopyRaw">複製模板（不替換）</button>
             </div>
           </div>
@@ -236,10 +236,11 @@
               <div class="small pro-only">小技巧：讓 AI 先問你幾個問題，或加上規則，通常會更穩定。</div>
             </div>
             <ol class="guide-steps lite-only">
-              <li>1) 複製這段 → 貼到 ChatGPT/Gemini 產生結果</li>
+              <li>1) 按「複製：貼到 ChatGPT/LLM」→ 貼到 ChatGPT/Gemini 產生結果</li>
               <li>2) 把結果貼回 LINE/Email/貼圖工具使用</li>
             </ol>
             <pre id="out"></pre>
+            <div class="small lite-only" style="margin-top:8px">把 LLM 生成的結果，再貼到 LINE/Email/貼圖工具</div>
           </div>
 
           <div class="divider"></div>
@@ -276,7 +277,7 @@
         <h3>快速上手（3 步驟）</h3>
         <ol class="guide-steps">
           <li>選一個情境模板，填 2–3 個欄位（看不到的可先略過）。</li>
-          <li>按「複製提示詞」（Pro 會顯示一鍵 Copy）或「複製模板（不替換）」。</li>
+          <li>按「複製：貼到 ChatGPT/LLM」（Pro 同樣）或「複製模板（不替換）」。</li>
           <li>貼到 ChatGPT / Gemini，按送出。</li>
         </ol>
         <div class="row">
@@ -835,7 +836,7 @@
       btn.classList.toggle("active", btn.dataset.mode === m);
     });
     const copyBtn = el("btnCopy");
-    if (copyBtn) copyBtn.textContent = m === "pro" ? "一鍵 Copy" : "複製提示詞";
+    if (copyBtn) copyBtn.textContent = "複製：貼到 ChatGPT/LLM";
     // 重新渲染，讓欄位標示跟著變化
     if (state.activeId) setActive(state.activeId);
     renderList();
