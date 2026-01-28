@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>提示詞公式庫（Pack A v0.1）</title>
+  <title>提示詞公式庫 / Prompt Formula Library（Pack A v0.1）</title>
   <style>
     :root{
       --bg:#0b0f14; --panel:#111824; --muted:#7f8ea3; --text:#e8eef7;
@@ -69,8 +69,19 @@
     .chip.pack{color:#c7d2fe;border-color:rgba(199,210,254,.18)}
     .chip.tag{color:#a7f3d0;border-color:rgba(167,243,208,.15)}
     .code{font-size:11px;color:var(--muted)}
-    /* 新手模式：隱藏技術標籤，避免資訊噪音 */
-    .wrap[data-mode="basic"] .chip{display:none}
+    /* Lite 模式：隱藏技術標籤，避免資訊噪音 */
+    .wrap[data-mode="lite"] .chip,
+    .wrap[data-mode="lite"] .code,
+    .wrap[data-mode="lite"] .pro-only{display:none}
+    .wrap[data-mode="pro"] .lite-only{display:none}
+    .segmented{
+      display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;
+      background:rgba(11,15,20,.6);
+    }
+    .segmented button{
+      border:none;background:transparent;color:var(--muted);padding:8px 14px;cursor:pointer;font-size:12px;
+    }
+    .segmented button.active{color:var(--text);background:rgba(125,211,252,.16)}
     .info-card{
       margin-top:14px;border:1px solid var(--line);border-radius:16px;padding:14px;
       background:rgba(15,23,42,.55);display:grid;gap:12px;
@@ -141,16 +152,18 @@
   </style>
 </head>
 <body>
-  <div class="wrap" id="app" data-mode="basic">
+  <div class="wrap" id="app" data-mode="lite">
     <div class="top">
       <div class="brand">
-        <h1>提示詞公式庫</h1>
-        <div class="sub">選一個情境 → 填 2–3 格 → 複製 → 貼到 ChatGPT / 其他 LLM</div>
-        <div class="sub">新手模式 / 專家模式：兩種填寫視圖，產出的提示詞需自行貼上使用</div>
+        <h1>提示詞公式庫 / Prompt Formula Library</h1>
+        <div class="sub">填 2–3 格 → Copy → 貼到 ChatGPT/Gemini/任何 LLM；Lite 是口語引導，Pro 是專家控制</div>
         <div class="small" id="metaLine"></div>
       </div>
       <div class="actions">
-        <button class="btn primary" id="btnMode">新手模式：開</button>
+        <div class="segmented" role="group" aria-label="模式切換">
+          <button type="button" class="seg-btn" data-mode="lite">Lite</button>
+          <button type="button" class="seg-btn" data-mode="pro">Pro</button>
+        </div>
         <button class="btn" id="btnQuickStart">快速上手</button>
         <details class="btn" style="padding:0">
           <summary class="btn" style="list-style:none;user-select:none">資料</summary>
@@ -217,8 +230,12 @@
           <div class="outwrap">
             <div class="outhead">
               <div class="hint">輸出預覽（會套用你填的內容）</div>
-              <div class="small">小技巧：讓 AI 先問你幾個問題，或加上規則，通常會更穩定。</div>
+              <div class="small pro-only">小技巧：讓 AI 先問你幾個問題，或加上規則，通常會更穩定。</div>
             </div>
+            <ol class="guide-steps lite-only">
+              <li>Step 1：把這段貼到 LLM</li>
+              <li>Step 2：把 LLM 產出的內容貼回 LINE/Email/貼文</li>
+            </ol>
             <pre id="out"></pre>
           </div>
 
@@ -265,6 +282,7 @@
 <script>
 (() => {
   const LS_KEY = "pfl_prompts_json_v1";
+  const UI_MODE_KEY = "ui_mode";
   const LOAD_TIMEOUT_MS = 2500;
 
   const el = (id) => document.getElementById(id);
@@ -281,7 +299,7 @@
     activeId: null,
     query: "",
     values: {},
-    uiMode: (localStorage.getItem("pfl_ui_mode") || "basic"),
+    uiMode: (localStorage.getItem(UI_MODE_KEY) || "lite"),
   };
   const debugState = {
     fetchStatus: "idle",
@@ -306,6 +324,12 @@
     "給 3 版",
     "加 emoji",
   ];
+  const LITE_LABELS = {
+    task: "你想做什麼",
+    audience: "給誰看/用",
+    format: "你要的樣子/格式",
+    constraints: "不要出現什麼/限制",
+  };
 
   const normalize = (s) => (s || "").toString().toLowerCase();
 
@@ -421,8 +445,10 @@
     wrap.className = "field";
     const isLong = (v.placeholder || "").length > 45 || ["draft", "items", "input", "options"].includes(v.key);
     const keyHint = (state.uiMode === "pro") ? ` <span class="small">（${escapeHtml(v.key)}）</span>` : "";
+    const liteLabel = LITE_LABELS[v.key];
+    const resolvedLabel = options.label || (state.uiMode === "lite" && liteLabel ? liteLabel : v.label);
     wrap.innerHTML = `
-      <label>${escapeHtml(options.label || v.label)}${keyHint}</label>
+      <label>${escapeHtml(resolvedLabel)}${keyHint}</label>
       ${isLong
         ? `<textarea data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}"></textarea>`
         : `<input data-key="${escapeHtml(v.key)}" placeholder="${escapeHtml(v.placeholder || "")}" />`
@@ -482,7 +508,7 @@
     const vMap = {};
     for (const v of (p.variables || [])) vMap[v.key] = v;
 
-    const isBasic = state.uiMode === "basic";
+    const isBasic = state.uiMode === "lite";
     const config = BASIC_FIELDS[p.id] || {};
     const primaryKeys = config.primary || (p.variables || []).map(v => v.key);
     const advancedKeys = config.advanced || [];
@@ -558,11 +584,18 @@
     }
   }
 
+  function buildPrompt(p) {
+    const base = compileTemplate(p.template, state.values).trim();
+    if (state.uiMode !== "lite") return base;
+    const litePreamble = "請你用自然口吻協助我完成以下需求。若資訊不足，先向我確認再開始輸出。\n\n";
+    return `${litePreamble}${base}`;
+  }
+
   function renderOut() {
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
     if (!p) return;
     const out = el("out");
-    if (out) out.textContent = compileTemplate(p.template, state.values);
+    if (out) out.textContent = buildPrompt(p);
   }
 
   function validateData(obj) {
@@ -687,7 +720,7 @@
     btnCopy.onclick = () => {
       const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
       if (!p) return;
-      copyText(compileTemplate(p.template, state.values));
+      copyText(buildPrompt(p));
     };
   }
 
@@ -745,22 +778,20 @@
   }
 
   function setMode(mode) {
-    const m = (mode === "pro") ? "pro" : "basic";
+    const m = (mode === "pro") ? "pro" : "lite";
     state.uiMode = m;
-    localStorage.setItem("pfl_ui_mode", m);
+    localStorage.setItem(UI_MODE_KEY, m);
     el("app").setAttribute("data-mode", m);
-    el("btnMode").textContent = (m === "basic") ? "新手模式：開" : "新手模式：關";
+    document.querySelectorAll(".seg-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.mode === m);
+    });
     // 重新渲染，讓欄位標示跟著變化
     if (state.activeId) setActive(state.activeId);
     renderList();
   }
-
-  const btnMode = el("btnMode");
-  if (btnMode) {
-    btnMode.onclick = () => {
-      setMode(state.uiMode === "basic" ? "pro" : "basic");
-    };
-  }
+  document.querySelectorAll(".seg-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setMode(btn.dataset.mode));
+  });
 
   // 複製失敗備援彈窗（特別是 Android / 非 HTTPS / 內網 IP）
   const btnCloseModal = el("btnCloseModal");

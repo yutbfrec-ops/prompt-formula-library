@@ -1,8 +1,9 @@
-# Prompt Formula Library (Pack A v0.1)
+# Prompt Formula Library / 提示詞公式庫 (Pack A v0.1)
 
 這是一個 **單頁（index.html）+ prompts.json** 的 Prompt Builder：
-- 選模板 / 填變數 → 一鍵 Copy → 貼到 ChatGPT / Gemini / 任何 LLM
+- 填 2–3 格 → Copy → 貼到 ChatGPT/Gemini/任何 LLM；Lite 是口語引導，Pro 是專家控制
 - Local-first：你匯入的 prompts.json 會存在瀏覽器 localStorage（不需要後端）
+  - 介面模式會記錄在 localStorage（`ui_mode`），重新整理會保留偏好
 
 ## 檔案
 - `index.html`：單頁 UI（搜尋、Pack 篩選、變數填空、Copy、匯入/匯出）
