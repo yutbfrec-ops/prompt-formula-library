@@ -145,6 +145,7 @@
     .kbd{font-family:var(--mono);font-size:11px;color:#cbd5e1;background:rgba(11,15,20,.6);border:1px solid rgba(255,255,255,.06);padding:2px 6px;border-radius:8px}
     .fold{border:1px dashed rgba(255,255,255,.08);border-radius:14px;padding:10px;background:rgba(11,15,20,.35)}
     .fold summary{cursor:pointer;font-size:12px;color:var(--muted);list-style:none}
+    .key-hints{margin:8px 0 0 18px;color:var(--muted);font-size:12px;line-height:1.5}
     .checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
     .check-item{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
     .guide-steps{margin:8px 0 0 0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.5}
@@ -337,9 +338,9 @@
   ];
   const LITE_LABELS = {
     task: "我要做什麼",
-    audience: "給誰看",
-    format: "我想要的樣子",
-    constraints: "不要出現什麼",
+    audience: "給誰看（對象）",
+    format: "我想要的樣子（例如：一句話/一段/條列/卡片式）",
+    constraints: "不要出現什麼（可選）",
   };
 
   const normalize = (s) => (s || "").toString().toLowerCase();
@@ -556,6 +557,21 @@
         fold.appendChild(inner);
         vars.appendChild(fold);
       }
+
+      const hintFold = document.createElement("details");
+      hintFold.className = "fold";
+      hintFold.innerHTML = `<summary>進階提示</summary>`;
+      const hintList = document.createElement("ul");
+      hintList.className = "key-hints";
+      for (const v of (p.variables || [])) {
+        const liteLabel = LITE_LABELS[v.key];
+        const label = liteLabel || v.label;
+        const item = document.createElement("li");
+        item.innerHTML = `${escapeHtml(label)} <span class="small">（${escapeHtml(v.key)}）</span>`;
+        hintList.appendChild(item);
+      }
+      hintFold.appendChild(hintList);
+      vars.appendChild(hintFold);
     }
 
     // bind values
