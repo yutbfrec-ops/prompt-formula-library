@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>生活小幫手模板庫（Pack A v0.1）</title>
+  <title>提示詞公式庫（Pack A v0.1）</title>
   <style>
     :root{
       --bg:#0b0f14; --panel:#111824; --muted:#7f8ea3; --text:#e8eef7;
@@ -27,6 +27,17 @@
     .brand h1{margin:0;font-size:20px;letter-spacing:.2px}
     .brand .sub{color:var(--muted);font-size:13px;line-height:1.3}
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .segmented{
+      display:inline-flex;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(11,15,20,.55);
+    }
+    .segmented button{
+      border:none;background:transparent;color:var(--muted);padding:6px 12px;border-radius:999px;
+      font-size:12px;cursor:pointer;
+    }
+    .segmented button.active{
+      color:var(--text);background:rgba(125,211,252,.16);border:1px solid rgba(125,211,252,.35);
+    }
     .btn{
       border:1px solid var(--line);background:linear-gradient(180deg, rgba(23,33,51,.9), rgba(17,24,36,.9));
       color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;
@@ -69,8 +80,8 @@
     .chip.pack{color:#c7d2fe;border-color:rgba(199,210,254,.18)}
     .chip.tag{color:#a7f3d0;border-color:rgba(167,243,208,.15)}
     .code{font-size:11px;color:var(--muted)}
-    /* 新手模式：隱藏技術標籤，避免資訊噪音 */
-    .wrap[data-mode="basic"] .chip{display:none}
+    /* Lite 模式：隱藏技術標籤，避免資訊噪音 */
+    .wrap[data-mode="lite"] .chip{display:none}
     .info-card{
       margin-top:14px;border:1px solid var(--line);border-radius:16px;padding:14px;
       background:rgba(15,23,42,.55);display:grid;gap:12px;
@@ -141,15 +152,18 @@
   </style>
 </head>
 <body>
-  <div class="wrap" id="app" data-mode="basic">
+  <div class="wrap" id="app" data-mode="pro">
     <div class="top">
       <div class="brand">
-        <h1>生活小幫手模板庫</h1>
-        <div class="sub">選一個情境 → 填 2–3 格 → 複製 → 貼到 ChatGPT / Gemini</div>
+        <h1>提示詞公式庫</h1>
+        <div class="sub">選一個模板 → 填 2–3 格 → 複製 → 貼到 ChatGPT / LLM（Pro / Lite 皆適用）</div>
         <div class="small" id="metaLine"></div>
       </div>
       <div class="actions">
-        <button class="btn primary" id="btnMode">新手模式：開</button>
+        <div class="segmented" role="tablist" aria-label="模式切換">
+          <button type="button" id="modePro" role="tab" aria-selected="true">Pro</button>
+          <button type="button" id="modeLite" role="tab" aria-selected="false">Lite</button>
+        </div>
         <button class="btn" id="btnQuickStart">快速上手</button>
         <details class="btn" style="padding:0">
           <summary class="btn" style="list-style:none;user-select:none">資料</summary>
@@ -192,7 +206,7 @@
               <p id="pTeaser"></p>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button class="btn primary" id="btnCopy">一鍵 Copy</button>
+              <button class="btn primary" id="btnCopy">複製：貼到 ChatGPT/LLM</button>
               <button class="btn" id="btnCopyRaw">複製模板（不替換）</button>
             </div>
           </div>
@@ -219,6 +233,9 @@
               <div class="small">小技巧：讓 AI 先問你幾個問題，或加上規則，通常會更穩定。</div>
             </div>
             <pre id="out"></pre>
+            <div class="small" id="liteHint" style="margin-top:8px;display:none">
+              把 LLM 生成的結果，再貼到 LINE/Email/貼圖工具
+            </div>
           </div>
 
           <div class="divider"></div>
@@ -247,7 +264,7 @@
         <h3>快速上手（3 步驟）</h3>
         <ol class="guide-steps">
           <li>選一個情境模板，填 2–3 個欄位（看不到的可先略過）。</li>
-          <li>按「一鍵 Copy」或「複製模板（不替換）」。</li>
+          <li>按「複製：貼到 ChatGPT/LLM」或「複製模板（不替換）」。</li>
           <li>貼到 ChatGPT / Gemini，按送出。</li>
         </ol>
         <div class="row">
@@ -280,7 +297,7 @@
     activeId: null,
     query: "",
     values: {},
-    uiMode: (localStorage.getItem("pfl_ui_mode") || "basic"),
+    uiMode: (localStorage.getItem("pfl_ui_mode") || "pro"),
   };
   const debugState = {
     fetchStatus: "idle",
@@ -481,12 +498,19 @@
     const vMap = {};
     for (const v of (p.variables || [])) vMap[v.key] = v;
 
-    const isBasic = state.uiMode === "basic";
+    const isLite = state.uiMode === "lite";
     const config = BASIC_FIELDS[p.id] || {};
     const primaryKeys = config.primary || (p.variables || []).map(v => v.key);
     const advancedKeys = config.advanced || [];
 
-    if (!isBasic) {
+    const liteLabelMap = {
+      task: "我要做什麼",
+      audience: "給誰看（對象）",
+      format: "我想要的樣子（例如：一句話/一段/條列/卡片式）",
+      constraints: "不要出現什麼（可選）",
+    };
+
+    if (!isLite) {
       for (const v of (p.variables || [])) vars.appendChild(createField(v));
     } else {
       for (const key of primaryKeys) {
@@ -496,18 +520,21 @@
           renderConstraintQuick(vars, vMap);
           continue;
         }
-        vars.appendChild(createField(v, { label: p.id === "A-TLDR" && key === "topic" ? "主題/要點" : v.label }));
+        const liteLabel = liteLabelMap[key];
+        const fallbackLabel = p.id === "A-TLDR" && key === "topic" ? "主題/要點" : v.label;
+        vars.appendChild(createField(v, { label: liteLabel || fallbackLabel }));
       }
       if (advancedKeys.length) {
         const fold = document.createElement("details");
         fold.className = "fold";
-        fold.innerHTML = `<summary>展開更多</summary>`;
+        fold.innerHTML = `<summary>進階提示</summary>`;
         const inner = document.createElement("div");
         inner.className = "grid";
         for (const key of advancedKeys) {
           const v = vMap[key];
           if (!v) continue;
-          inner.appendChild(createField(v));
+          const liteLabel = liteLabelMap[key];
+          inner.appendChild(createField(v, { label: liteLabel || v.label }));
         }
         fold.appendChild(inner);
         vars.appendChild(fold);
@@ -561,7 +588,16 @@
     const p = (state.data?.prompts || []).find(x => x.id === state.activeId);
     if (!p) return;
     const out = el("out");
-    if (out) out.textContent = compileTemplate(p.template, state.values);
+    if (out) {
+      const base = compileTemplate(p.template, state.values);
+      if (state.uiMode === "lite") {
+        out.textContent = `請依我填的內容，直接產出可使用的成品。若資訊不足，先問我 2 個問題再開始。\n\n${base}`;
+      } else {
+        out.textContent = base;
+      }
+    }
+    const liteHint = el("liteHint");
+    if (liteHint) liteHint.style.display = state.uiMode === "lite" ? "block" : "none";
   }
 
   function validateData(obj) {
@@ -743,23 +779,32 @@
     };
   }
 
+  function updateModeUI(mode) {
+    const proBtn = el("modePro");
+    const liteBtn = el("modeLite");
+    if (!proBtn || !liteBtn) return;
+    const isPro = mode === "pro";
+    proBtn.classList.toggle("active", isPro);
+    liteBtn.classList.toggle("active", !isPro);
+    proBtn.setAttribute("aria-selected", String(isPro));
+    liteBtn.setAttribute("aria-selected", String(!isPro));
+  }
+
   function setMode(mode) {
-    const m = (mode === "pro") ? "pro" : "basic";
+    const m = (mode === "pro") ? "pro" : "lite";
     state.uiMode = m;
     localStorage.setItem("pfl_ui_mode", m);
     el("app").setAttribute("data-mode", m);
-    el("btnMode").textContent = (m === "basic") ? "新手模式：開" : "新手模式：關";
+    updateModeUI(m);
     // 重新渲染，讓欄位標示跟著變化
     if (state.activeId) setActive(state.activeId);
     renderList();
   }
 
-  const btnMode = el("btnMode");
-  if (btnMode) {
-    btnMode.onclick = () => {
-      setMode(state.uiMode === "basic" ? "pro" : "basic");
-    };
-  }
+  const modePro = el("modePro");
+  if (modePro) modePro.onclick = () => setMode("pro");
+  const modeLite = el("modeLite");
+  if (modeLite) modeLite.onclick = () => setMode("lite");
 
   // 複製失敗備援彈窗（特別是 Android / 非 HTTPS / 內網 IP）
   const btnCloseModal = el("btnCloseModal");
